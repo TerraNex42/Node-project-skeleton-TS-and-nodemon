@@ -1,22 +1,62 @@
-import axios, { AxiosHeaders, AxiosRequestConfig } from "axios";
-import { trimEnd, trim } from "lodash";
+import axios, { AxiosRequestConfig } from "axios";
+import { trim, filter, forEach } from "lodash";
 import { format, add, formatRFC3339 } from "date-fns";
 
 type ADNotam = {
   code: string;
   name: string;
-  aerodromes_services: [];
-  aire_mouvement: [];
-  aire_trafic: [];
-  balisage: [];
-  aides_atter_instal_radionav_GNSS: [];
-  procedures: [];
-  organisation_espace_services_circulation: [];
-  meteorologie_equipements: [];
-  reglementation_espace_aerien: [];
-  avertissements_navigation: [];
-  obstacles: [];
-  autres_info: [];
+  aerodromes_services: NOTAM[];
+  aire_mouvement: NOTAM[];
+  aire_trafic: NOTAM[];
+  balisage: NOTAM[];
+  aides_atter_instal_radionav_GNSS: NOTAM[];
+  procedures: NOTAM[];
+  organisation_espace_services_circulation: NOTAM[];
+  meteorologie_equipements: NOTAM[];
+  reglementation_espace_aerien: NOTAM[];
+  avertissements_navigation: NOTAM[];
+  obstacles: NOTAM[];
+  autres_info: NOTAM[];
+};
+
+type FormatedNotam = {
+  code: string;
+  startValidity: string;
+  endValidity: string;
+  text: string;
+};
+
+type NOTAM = {
+  pibSection: string;
+  id: string;
+  nof: string;
+  series: string;
+  number: number;
+  year: number;
+  type: string;
+  qLine: {
+    fir: string;
+    code23: string;
+    code45: string;
+    traffic: string;
+    purpose: string;
+    scope: string;
+    lower: number;
+    upper: number;
+  };
+  coordinates: string;
+  radius: number;
+  itemA: string;
+  startValidity: string;
+  endValidity: string;
+  startValidityFormat: string;
+  endValidityFormat: string;
+  itemE: string;
+  multiLanguage: {
+    itemE: string;
+  };
+  marker: string;
+  valid: string;
 };
 
 export default class sofia {
@@ -59,14 +99,14 @@ export default class sofia {
     }
   }
 
-  async getNotamAirport(oaciCode: string) {
+  async getNotamAirport(oaciCode: string[]) {
     const options: AxiosRequestConfig = {
       method: "POST",
       url: "https://sofia-briefing.aviation-civile.gouv.fr/sofia",
       params: {
         ":operation": "postAeroPibRequest",
         traffic: "I",
-        "aero[]": ["LFPG", 'LFDA'],
+        "aero[]": oaciCode,
         typeVol: "LA",
         departure_date: format(add(new Date(), { minutes: 2 }), "dd-MM-yyyy"),
         departure_time: format(add(new Date(), { minutes: 2 }), "HHmm"),
@@ -75,8 +115,8 @@ export default class sofia {
         valid_from: formatRFC3339(add(new Date(), { minutes: 2 })),
       },
       headers: {
-        "Cookie": this._JSESSION_ID
-      }
+        Cookie: this._JSESSION_ID,
+      },
     };
     try {
       const request = await axios.request(options);
@@ -96,10 +136,34 @@ export default class sofia {
       }
     }
   }
+  getListAirportsPresent(): string[] {
+    let listAirport: string[] = [];
+    this._notamlist.forEach((element) => {
+      listAirport.push(element.code);
+    });
+    return listAirport;
+  }
 
-  //get airport present in the object
-  //return a array of notam per airport present
-
+  getlistNOTAMByAirport(airport: string) {
+    let formatedNotamlist: FormatedNotam[] = [];
+    const listNotam = filter(this._notamlist, (o) => {
+      return o.code == airport;
+    });
+    forEach(listNotam[0], function (value) {
+      if (typeof value != "string") {
+        forEach(value, function (el) {
+          console.log(el);
+          formatedNotamlist.push({
+            code: el.itemA,
+            startValidity: el.startValidity,
+            endValidity: el.endValidity,
+            text: el.multiLanguage.itemE,
+          });
+        });
+      }
+    });
+    return formatedNotamlist;
+  }
 }
 
 function extractCookie(str: string): string {

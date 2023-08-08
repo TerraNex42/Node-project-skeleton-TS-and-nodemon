@@ -1,6 +1,17 @@
 {
+  "scripts": {
+    "dev": "npx nodemon ./index.ts",
+    "debug": "nodemon --inspect app.js"
+  },
   "devDependencies": {
+    "@types/lodash": "^4.14.196",
     "nodemon": "^2.0.22",
     "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "date-fns": "^2.30.0",
+    "lodash": "^4.17.21",
+    "puppeteer": "^20.8.0"
   }
 }
